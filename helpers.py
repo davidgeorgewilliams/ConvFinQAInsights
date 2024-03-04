@@ -2,9 +2,34 @@ import glob
 import hashlib
 import html
 import json
+import math
 import re
 from typing import List
 
+
+def is_yes_or_no_answer(text_input: str) -> float:
+    if re.match(r"^\s*(?:yes|no)\s*$", text_input, re.IGNORECASE):
+        return True
+    return False
+
+
+def yes_or_no_answer_to_float(text_input: str) -> float:
+    if text_input.lower() == 'yes':
+        return 1
+    elif text_input.lower() == 'no':
+        return 0
+    return math.nan
+
+
+def parse_numerical_values(text_input: str) -> List[float]:
+    try:
+        if text_input.startswith("The"):
+            return [math.nan]
+        if re.search(r"=[\-\d.]+$", text_input):
+            text_input = text_input.split("=")[-1]
+        return [float(x) for x in re.findall(r'\b[\-\d.]+\b', str(text_input))]
+    except ValueError:
+        return [math.nan]
 
 def from_json(json_string: str):
     return json.loads(json_string)

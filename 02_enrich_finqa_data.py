@@ -27,18 +27,19 @@ def get_response(message: str):
 
 
 enriched_data = dict()
-if os.path.isfile("data/qa_data_enriched.json"):
-    with open("data/qa_data_enriched.json", encoding="utf-8") as f_in:
-        with open("data/qa_data_enriched_backup.json", "w", encoding="utf-8") as f_out:
+if os.path.isfile("data/finqa_data_enriched.json"):
+    with open("data/finqa_data_enriched.json", encoding="utf-8") as f_in:
+        with open("data/finqa_data_enriched_backup.json", "w", encoding="utf-8") as f_out:
             for line in f_in:
+                data = from_json(line)
                 key = md5("\t".join([data["pre_text"], data["table"], data["post_text"]]))
                 data = from_json(line)
                 enriched_data[key] = data
                 f_out.write(to_json(data) + "\n")
 
 line_count = 0
-with open("data/qa_data.json", encoding="utf-8") as f_in:
-    with open("data/qa_data_enriched.json", "w", encoding="utf-8") as f_out:
+with open("data/finqa_data.json", encoding="utf-8") as f_in:
+    with open("data/finqa_data_enriched.json", "w", encoding="utf-8") as f_out:
         for line in f_in:
             data = from_json(line)
             key = md5("\t".join([data["pre_text"], data["table"], data["post_text"]]))
@@ -57,26 +58,30 @@ with open("data/qa_data.json", encoding="utf-8") as f_in:
             question_header = None
             answer_info = None
             delimiter_info = None
+            numerical_info = None
             if num_qa_pairs == 1:
                 question_info = "a question"
                 question_header = "QUESTION:"
                 answer_info = "answer"
                 delimiter_info = ""
+                numerical_info = "a numerical response"
             elif num_qa_pairs == 2:
                 question_info = "two questions"
                 question_header = "QUESTIONS:"
                 answer_info = "answers"
                 delimiter_info = "tab delimited"
+                numerical_info = "numerical responses"
             else:
                 raise ValueError(f"Unexpected number of qa_pairs")
             question_text = "\n".join([qa_pair["question"] for qa_pair in qa_pairs])
             data["openai_answers"] = get_response(
                 f"Here is a document and {question_info} regarding the document. "
                 f"Please respond with the numerical {answer_info} {delimiter_info}.\n\n"
+                f"Please be sure to respond only with {numerical_info} and do not reply with words.\n\n"
                 f"DOCUMENT: {pre_text}\n{table}\n{post_text}"
                 f"{question_header}\n\n{question_text}")["choices"][0]["message"]["content"].strip()
             f_out.write(to_json(data) + "\n")
             f_out.flush()
 
-if os.path.isfile("data/qa_data_enriched_backup.json"):
-    os.remove("data/qa_data_enriched_backup.json")
+if os.path.isfile("data/finqa_data_enriched_backup.json"):
+    os.remove("data/finqa_data_enriched_backup.json")

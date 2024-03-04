@@ -2,7 +2,7 @@ from helpers import from_json_file, glob_files, to_json
 import re
 
 data_files = glob_files("data/original/*.json")
-with open("data/qa_data.json", "w", encoding="utf-8") as f_out:
+with open("data/finqa_data.json", "w", encoding="utf-8") as f_out:
     for data_file in data_files:
         instances = from_json_file(data_file)
         for instance in instances:
