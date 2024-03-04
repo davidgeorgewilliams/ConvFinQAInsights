@@ -1,12 +1,6 @@
 # Operating System Files
 .DS_Store
 
-# Data Files
-**/data/
-
-# Backups
-**/backup/
-
 # Python Files
 **/__pycache__/
 
