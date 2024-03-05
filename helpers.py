@@ -4,7 +4,39 @@ import html
 import json
 import math
 import re
-from typing import List
+from typing import Any, Dict, List
+
+
+def create_instance_key(data: Dict[str, Any]) -> str:
+    return md5("\t".join([data["pre_text"], data["table"], data["post_text"]]))
+
+
+def create_message_body(data: Dict[str, Any]) -> str:
+    pre_text = re.sub(r"[\n\t\s]+", " ", data["pre_text"])
+    table = re.sub(r"[\n\t\s]+", " ", data["table"])
+    post_text = re.sub(r"[\n\t\s]+", " ", data["post_text"])
+    qa_pairs = data["qa_pairs"]
+    num_qa_pairs = len(qa_pairs)
+    if num_qa_pairs == 1:
+        question_info = "a question"
+        question_header = "QUESTION:"
+        answer_info = "answer"
+        delimiter_info = ""
+        numerical_info = "a numerical response"
+    elif num_qa_pairs == 2:
+        question_info = "two questions"
+        question_header = "QUESTIONS:"
+        answer_info = "answers"
+        delimiter_info = "tab delimited"
+        numerical_info = "numerical responses"
+    else:
+        raise ValueError(f"Unexpected number of qa_pairs")
+    question_text = "\n".join([qa_pair["question"] for qa_pair in qa_pairs])
+    return (f"Here is a document and {question_info} regarding the document. "
+            f"Please respond with the numerical {answer_info} {delimiter_info}.\n\n"
+            f"Please be sure to respond only with {numerical_info} and do not reply with words.\n\n"
+            f"DOCUMENT: {pre_text}\n{table}\n{post_text}"
+            f"{question_header}\n\n{question_text}")
 
 
 def is_yes_or_no_answer(text_input: str) -> float:
@@ -31,6 +63,7 @@ def parse_numerical_values(text_input: str) -> List[float]:
     except ValueError:
         return [math.nan]
 
+
 def from_json(json_string: str):
     return json.loads(json_string)
 
@@ -50,25 +83,3 @@ def glob_files(glob_format: str) -> List[str]:
 
 def md5(input_string: str) -> str:
     return hashlib.md5(input_string.encode()).hexdigest()
-
-
-def safe_clean_text(text: str):
-    text = html.unescape(text)
-    text = text.encode(encoding="utf-8", errors="ignore").decode(encoding="utf-8")
-    text = text.replace(u'\xa0', ' ')
-    text = text.replace(u'\xc2\xa0', ' ')
-    text = text.replace(u'\xe2\x80\x8A', ' ')
-    text = text.replace("\u200D", " ")
-    text = re.sub(r"(\w)\s*,\s*(\w)", "\\1, \\2", text)
-    text = re.sub(r"(\w)\s+([.,)])", "\\1\\2", text)
-    text = re.sub(r"(\w{2,})\.(\w{2,})", "\\1. \\2", text)
-    text = re.sub(r"\. \. \.", " ", text)
-    text = re.sub(r"\[\d+]", " ", text)
-    text = re.sub(r"[`’‘]", "'", text)
-    text = re.sub(r"…", ". ", text)
-    text = text.replace("…", ". ")
-    text = re.sub(r"[\t ]+", " ", text).strip()
-    text = re.sub(r"[ ]+\n", "\n", text)
-    text = re.sub(r"\n[ ]+", "\n", text)
-    text = re.sub(r"[ ]+,", ",", text)
-    return text
