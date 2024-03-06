@@ -32,7 +32,6 @@ Before running the code, ensure you have the following dependencies installed:
     ```bash
     pip install -r requirements.txt
     ```
-Certainly! Below is the revised USAGE section focusing on the specific files and their execution order:
 
 ### Usage
 
