@@ -1,47 +1,74 @@
-import math
-import numpy as np
+from collections import defaultdict
 from helpers import *
-from typing import Any
-import re
 
-correct_answers = 0
-incorrect_answers = 0
+# Define a dictionary to map model names to their respective data sources
+sources = {
+    "claude-3": "finqa_data_enriched_anthropic.json",
+    "gpt-4": "finqa_data_enriched_openai.json"
+}
 
-with open("data/finqa_data_enriched_openai.json", encoding="utf-8") as f_in:
-    for line in f_in:
-        data = from_json(line)
-        data2 = from_json(line)
-        qa_pairs = data["qa_pairs"]
-        openai_answers: List[Any] = list()
-        if len(qa_pairs) > 1:
-            openai_answers = re.split(r"\s+", data["openai_answers"])
-        else:
-            openai_answers = [data["openai_answers"]]
-        if openai_answers[0].startswith("The document"):
-            openai_answers = ["" for _ in range(len(qa_pairs))]
-        for i in range(len(qa_pairs)):
-            if is_yes_or_no_answer(qa_pairs[i]['answer']):
-                qa_pairs[i]['answer'] = str(yes_or_no_answer_to_float(qa_pairs[i]['answer']))
-            if is_yes_or_no_answer(openai_answers[i]):
-                openai_answers[i] = str(yes_or_no_answer_to_float(openai_answers[i]))
-            if len(qa_pairs[i]['answer'].strip()) == 0:
-                qa_pairs[i]['answer'] = openai_answers[i]
-            reference_value = parse_numerical_values(qa_pairs[i]['answer'])[0]
-            gpt4_values = parse_numerical_values(openai_answers[i])
-            gpt4_value = gpt4_values[0] if len(gpt4_values) else math.nan
-            question = qa_pairs[i]['question']
-            if reference_equals(reference_value, gpt4_value):
-                correct_answers += 1
-            elif reference_equals(abs(reference_value), abs(gpt4_value)):
-                correct_answers += 1
-            elif reference_equals(100 * abs(reference_value), abs(gpt4_value)):
-                correct_answers += 1
-            elif reference_equals(abs(reference_value), 100 * abs(gpt4_value)):
-                correct_answers += 1
+# Initialize a nested defaultdict to store metrics for each model
+metrics = defaultdict(lambda: defaultdict(float))
+
+for source in sources:
+    filename = sources[source]
+    with open(f"data/{filename}", encoding="utf-8") as f_in:
+        for line in f_in:
+            data = from_json(line)
+            qa_pairs = data["qa_pairs"]
+            source_answers: List[Any] = list()
+            source_response = data["response"]
+
+            # Process source response to extract answers
+            if len(qa_pairs) > 1:
+                source_response = re.sub(r"\\\\n", " ", source_response)
+                source_response = re.sub(r"\\t", " ", source_response)
+                source_response = re.sub(r"\n", " ", source_response)
+                source_answers.extend(re.findall(r"(\S+)", source_response,
+                                                 re.DOTALL | re.IGNORECASE))
             else:
-                incorrect_answers += 1
-            print(f"Question:{question}")
-            print(f"Reference Value:{reference_value}")
-            print(f"GPT-4 Response: {gpt4_value}")
-            print(f"Running Accuracy: {correct_answers / (correct_answers + incorrect_answers)}")
-        print("-" * 100)
+                source_answers.append(source_response)
+
+            # Handle special cases where source response starts with specific text
+            if source_response.startswith("The document"):
+                source_answers.extend([None for _ in range(len(qa_pairs))])
+
+            # Compare source answers with target answers and update metrics
+            for i in range(len(qa_pairs)):
+                source_answer = source_answers[i]
+                target_answer = qa_pairs[i]['answer']
+
+                # Convert yes/no answers to float if needed
+                if is_yes_or_no_answer(qa_pairs[i]['answer']):
+                    target_answer = str(yes_or_no_answer_to_float(qa_pairs[i]['answer']))
+                if is_yes_or_no_answer(source_answers[i]):
+                    source_answer = str(yes_or_no_answer_to_float(source_answers[i]))
+
+                # If target answer is empty, use source answer
+                if len(qa_pairs[i]['answer'].strip()) == 0:
+                    target_answer = source_answer
+
+                # Parse numerical values from answers
+                target_value = parse_numerical_values(target_answer)[0]
+                source_values = parse_numerical_values(source_answer)
+                source_value = source_values[0] if len(source_values) else math.nan
+                question = qa_pairs[i]['question']
+
+                # Update metrics based on answer comparison
+                if essentially_equals(target_value, source_value):
+                    metrics[source]["correct"] += 1
+                elif essentially_equals(abs(target_value), abs(source_value)):
+                    metrics[source]["correct"] += 1
+                elif essentially_equals(100 * abs(target_value), abs(source_value)):
+                    metrics[source]["correct"] += 1
+                elif essentially_equals(abs(target_value), 100 * abs(source_value)):
+                    metrics[source]["correct"] += 1
+                else:
+                    metrics[source]["incorrect"] += 1
+
+# Calculate and print the accuracy for each data source.
+for source in sources:
+    correct = metrics[source]["correct"]
+    incorrect = metrics[source]["incorrect"]
+    accuracy = correct / (correct + incorrect)
+    print(f"Source {source}. Accuracy: {accuracy}.")
