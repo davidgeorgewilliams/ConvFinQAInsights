@@ -6,6 +6,8 @@ import math
 import re
 from typing import Any, Dict, List
 
+import numpy as np
+
 
 def create_instance_key(data: Dict[str, Any]) -> str:
     return md5("\t".join([data["pre_text"], data["table"], data["post_text"]]))
@@ -40,6 +42,8 @@ def create_message_body(data: Dict[str, Any]) -> str:
 
 
 def is_yes_or_no_answer(text_input: str) -> float:
+    if text_input is None:
+        return False
     if re.match(r"^\s*(?:yes|no)\s*$", text_input, re.IGNORECASE):
         return True
     return False
@@ -54,6 +58,8 @@ def yes_or_no_answer_to_float(text_input: str) -> float:
 
 
 def parse_numerical_values(text_input: str) -> List[float]:
+    if text_input is None:
+        return [math.nan]
     try:
         if text_input.startswith("The"):
             return [math.nan]
@@ -83,3 +89,20 @@ def glob_files(glob_format: str) -> List[str]:
 
 def md5(input_string: str) -> str:
     return hashlib.md5(input_string.encode()).hexdigest()
+
+
+def reference_equals(x: float, y: float) -> bool:
+    if np.isnan(x):
+        if np.isnan(y):
+            return False
+        else:
+            return True
+    else:
+        if np.isnan(y):
+            return False
+        else:
+            delta = abs(x - y)
+            if delta < 0.5 or abs(delta / max(x, y)) < 0.01:
+                return True
+            else:
+                return False

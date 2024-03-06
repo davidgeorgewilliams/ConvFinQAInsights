@@ -51,7 +51,7 @@ with open("data/finqa_data.json", encoding="utf-8") as f_in:
                 f_out.flush()
                 continue
             body = create_message_body(data)
-            data["anthropic_response"] = get_response(body)
+            data["response"] = get_response(body)
             f_out.write(to_json(data) + "\n")
             f_out.flush()
 
