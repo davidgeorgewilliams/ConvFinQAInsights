@@ -2,6 +2,9 @@
 
 ConvFinQAInsights is a repository aimed at providing insights into financial question answering (FinQA) models using conversational AI techniques. The repository contains code for data preprocessing, model evaluation, and performance analysis. Additionally, it includes a research document detailing the findings and implications of the analysis, along with instructions on replicating the experiments.
 
+![ConvFinQAInsights](img/ConvFinQAInsights.png)
+
+
 ## Features
 
 - **Data Preprocessing**: Efficient mechanisms for preprocessing financial data, including parsing, cleaning, and formatting.
